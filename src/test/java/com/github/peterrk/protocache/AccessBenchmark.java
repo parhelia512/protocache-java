@@ -2,8 +2,12 @@ package com.github.peterrk.protocache;
 
 import com.github.peterrk.protocache.pc.ArrMap;
 import com.github.peterrk.protocache.pc.Small;
-import com.google.gson.Gson;
 import org.apache.fory.Fory;
+import org.apache.fory.collection.BoolList;
+import org.apache.fory.collection.Float32List;
+import org.apache.fory.collection.Float64List;
+import org.apache.fory.collection.Int32List;
+import org.apache.fory.collection.UInt64List;
 import org.apache.fory.config.Language;
 import org.openjdk.jmh.annotations.*;
 
@@ -12,8 +16,11 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -50,13 +57,13 @@ public class AccessBenchmark {
 
     @Benchmark
     public void traverseFory(ForyState ctx) {
-        com.github.peterrk.protocache.fr.Main root = (com.github.peterrk.protocache.fr.Main) ctx.fory.deserialize(ctx.raw);
+        com.github.peterrk.protocache.fr.Main root = ctx.fory.deserialize(ctx.raw, com.github.peterrk.protocache.fr.Main.class);
         ctx.traverse(root);
     }
 
     @Benchmark
     public void traverseForyJava(JavaForyState ctx) {
-        com.github.peterrk.protocache.fr.Main root = (com.github.peterrk.protocache.fr.Main) ctx.fory.deserialize(ctx.raw);
+        com.github.peterrk.protocache.fr.Main root = ctx.fory.deserialize(ctx.raw, com.github.peterrk.protocache.fr.Main.class);
         ctx.traverse(root);
     }
 
@@ -105,19 +112,18 @@ public class AccessBenchmark {
         Fory fory;
 
         @Setup(value = Level.Trial)
-        public void setup() throws IOException {
-            byte[] tmp = Files.readAllBytes(Paths.get("test-fory.json"));
-            Gson gson = new Gson();
-            com.github.peterrk.protocache.fr.Main root = gson.fromJson(new String(tmp, StandardCharsets.UTF_8), com.github.peterrk.protocache.fr.Main.class);
-            wash(root);
+        public void setup() {
+            com.github.peterrk.protocache.fr.Main root = createRoot();
 
-            fory = Fory.builder().withLanguage(Language.XLANG).withCodegen(false).build();
-            fory.register(com.github.peterrk.protocache.fr.Small.class, "test.Small");
-            fory.register(com.github.peterrk.protocache.fr.Main.class, "test.Main");
-            //fory.register(java.util.Map.class, "java.util.Map");
+            fory = Fory.builder()
+                    .withXlang(true)
+                    .withCompatible(true)
+                    .withRefTracking(true)
+                    .withCodegen(false)
+                    .withModule(com.github.peterrk.protocache.fr.FrForyModule.INSTANCE)
+                    .build();
 
             raw = fory.serialize(root);
-            //fory.deserialize(raw);
 
             junk = new Junk();
         }
@@ -128,19 +134,19 @@ public class AccessBenchmark {
         Fory fory;
 
         @Setup(value = Level.Trial)
-        public void setup() throws IOException {
-            byte[] tmp = Files.readAllBytes(Paths.get("test-fory.json"));
-            Gson gson = new Gson();
-            com.github.peterrk.protocache.fr.Main root = gson.fromJson(new String(tmp, StandardCharsets.UTF_8), com.github.peterrk.protocache.fr.Main.class);
-            wash(root);
+        public void setup() {
+            com.github.peterrk.protocache.fr.Main root = createRoot();
 
             fory = Fory.builder().withLanguage(Language.JAVA).build();
+            fory.register(com.github.peterrk.protocache.fr.Mode.class);
             fory.register(com.github.peterrk.protocache.fr.Small.class);
+            fory.register(com.github.peterrk.protocache.fr.Vec2D.Vec1D.class);
+            fory.register(com.github.peterrk.protocache.fr.Vec2D.class);
+            fory.register(com.github.peterrk.protocache.fr.ArrMap.Array.class);
+            fory.register(com.github.peterrk.protocache.fr.ArrMap.class);
             fory.register(com.github.peterrk.protocache.fr.Main.class);
-            fory.register(java.util.Map.class);
 
             raw = fory.serialize(root);
-            //fory.deserialize(raw);
 
             junk = new Junk();
         }
@@ -151,10 +157,8 @@ public class AccessBenchmark {
         com.github.peterrk.protocache.fr.Main root;
 
         @Setup(value = Level.Trial)
-        public void setup() throws IOException {
-            byte[] tmp = Files.readAllBytes(Paths.get("test-fory.json"));
-            Gson gson = new Gson();
-            root = gson.fromJson(new String(tmp, StandardCharsets.UTF_8), com.github.peterrk.protocache.fr.Main.class);
+        public void setup() {
+            root = createRoot();
             junk = new Junk();
         }
     }
@@ -170,137 +174,234 @@ public class AccessBenchmark {
             junk.reset();
         }
 
-        public static void wash(com.github.peterrk.protocache.fr.Main root) {
-            root.index = new HashMap<>(root.index);
-            root.objects = new HashMap<>(root.objects);
-            for (int i = 0; i < root.vector.length; i++) {
-                root.vector[i] = new HashMap<>(root.vector[i]);
-            }
-            root.arrays = new HashMap<>(root.arrays);
-
-            if (root.i32v == null) root.i32v = new int[0];
-            if (root.u64v == null) root.u64v = new long[0];
-            if (root.strv == null) root.strv = new String[0];
-            if (root.datav == null) root.datav = new byte[0][];
-            if (root.f32v == null) root.f32v = new float[0];
-            if (root.f64v == null) root.f64v = new double[0];
-            if (root.flags == null) root.flags = new boolean[0];
-            if (root.objectv == null) root.objectv = new com.github.peterrk.protocache.fr.Small[0];
-            if (root.matrix == null) root.matrix = new float[0][];
-        }
-
         void traverse(com.github.peterrk.protocache.fr.Main root) {
-            junk.consume(root.i32);
-            junk.consume(root.u32);
-            junk.consume(root.i64);
-            junk.consume(root.u64);
-            junk.consume(root.flag);
-            junk.consume(root.mode);
-            if (root.str != null) {
-                junk.consume(root.str);
+            junk.consume(root.getI32());
+            junk.consume((int) root.getU32());
+            junk.consume(root.getI64());
+            junk.consume(root.getU64());
+            junk.consume(root.getFlag());
+            if (root.getMode() != null) {
+                junk.consume(root.getMode().getId());
             }
-            if (root.data != null) {
-                junk.consume(root.data);
+            if (root.getStr() != null) {
+                junk.consume(root.getStr());
             }
-            junk.consume(root.f32);
-            junk.consume(root.f64);
-            if (root.object != null) {
-                traverse(root.object);
+            if (root.getData() != null) {
+                junk.consume(root.getData());
             }
-            if (root.i32v != null) {
-                for (int v : root.i32v) {
+            junk.consume(root.getF32());
+            junk.consume(root.getF64());
+            if (root.getObject() != null) {
+                traverse(root.getObject());
+            }
+            if (root.getI32v() != null) {
+                Int32List i32v = root.getI32v();
+                for (int i = 0; i < i32v.size(); i++) {
+                    junk.consume(i32v.getInt(i));
+                }
+            }
+            if (root.getU64v() != null) {
+                UInt64List u64v = root.getU64v();
+                for (int i = 0; i < u64v.size(); i++) {
+                    junk.consume(u64v.getLong(i));
+                }
+            }
+            if (root.getStrv() != null) {
+                for (String v : root.getStrv()) {
                     junk.consume(v);
                 }
             }
-            if (root.u64v != null) {
-                for (long v : root.u64v) {
+            if (root.getDatav() != null) {
+                for (byte[] v : root.getDatav()) {
                     junk.consume(v);
                 }
             }
-            if (root.strv != null) {
-                for (String v : root.strv) {
-                    junk.consume(v);
+            if (root.getF32v() != null) {
+                Float32List f32v = root.getF32v();
+                for (int i = 0; i < f32v.size(); i++) {
+                    junk.consume(f32v.getFloat(i));
                 }
             }
-            if (root.datav != null) {
-                for (byte[] v : root.datav) {
-                    junk.consume(v);
+            if (root.getF64v() != null) {
+                Float64List f64v = root.getF64v();
+                for (int i = 0; i < f64v.size(); i++) {
+                    junk.consume(f64v.getDouble(i));
                 }
             }
-            if (root.f32v != null) {
-                for (float v : root.f32v) {
-                    junk.consume(v);
+            if (root.getFlags() != null) {
+                BoolList flags = root.getFlags();
+                for (int i = 0; i < flags.size(); i++) {
+                    junk.consume(flags.getBoolean(i));
                 }
             }
-            if (root.f64v != null) {
-                for (double v : root.f64v) {
-                    junk.consume(v);
-                }
-            }
-            if (root.flags != null) {
-                for (boolean v : root.flags) {
-                    junk.consume(v);
-                }
-            }
-            if (root.objectv != null) {
-                for (com.github.peterrk.protocache.fr.Small v : root.objectv) {
+            if (root.getObjectv() != null) {
+                for (com.github.peterrk.protocache.fr.Small v : root.getObjectv()) {
                     traverse(v);
                 }
             }
-            junk.consume(root.t_u32);
-            junk.consume(root.t_i32);
-            junk.consume(root.t_s32);
-            junk.consume(root.t_u64);
-            junk.consume(root.t_i64);
-            junk.consume(root.t_s64);
+            junk.consume((int) root.getTU32());
+            junk.consume(root.getTI32());
+            junk.consume(root.getTS32());
+            junk.consume(root.getTU64());
+            junk.consume(root.getTI64());
+            junk.consume(root.getTS64());
 
-            if (root.index != null) {
-                for (Map.Entry<String, Integer> entry : root.index.entrySet()) {
+            if (root.getIndex() != null) {
+                for (Map.Entry<String, Integer> entry : root.getIndex().entrySet()) {
                     junk.consume(entry.getKey());
                     junk.consume(entry.getValue());
                 }
             }
 
-            if (root.objects != null) {
-                for (Map.Entry<Integer, com.github.peterrk.protocache.fr.Small> entry : root.objects.entrySet()) {
+            if (root.getObjects() != null) {
+                for (Map.Entry<Integer, com.github.peterrk.protocache.fr.Small> entry : root.getObjects().entrySet()) {
                     junk.consume(entry.getKey());
                     traverse(entry.getValue());
                 }
             }
 
-            if (root.matrix != null) {
-                for (float[] u : root.matrix) {
-                    for (float v : u) {
-                        junk.consume(v);
-                    }
-                }
+            if (root.getMatrix() != null) {
+                traverse(root.getMatrix());
             }
 
-            if (root.vector != null) {
-                for (Map<String, float[]> u : root.vector) {
+            if (root.getVector() != null) {
+                for (com.github.peterrk.protocache.fr.ArrMap u : root.getVector()) {
                     traverse(u);
                 }
             }
-            if (root.arrays != null) {
-                traverse(root.arrays);
+            if (root.getArrays() != null) {
+                traverse(root.getArrays());
             }
         }
 
         void traverse(com.github.peterrk.protocache.fr.Small root) {
-            junk.consume(root.i32);
-            junk.consume(root.flag);
-            if (root.str != null) {
-                junk.consume(root.str);
+            junk.consume(root.getI32());
+            junk.consume(root.getFlag());
+            if (root.getStr() != null) {
+                junk.consume(root.getStr());
             }
         }
 
-        void traverse(Map<String, float[]> map) {
-            for (Map.Entry<String, float[]> entry : map.entrySet()) {
-                junk.consume(entry.getKey());
-                for (float v : entry.getValue()) {
-                    junk.consume(v);
+        void traverse(com.github.peterrk.protocache.fr.Vec2D root) {
+            for (com.github.peterrk.protocache.fr.Vec2D.Vec1D u : root.getX()) {
+                Float32List x = u.getX();
+                for (int i = 0; i < x.size(); i++) {
+                    junk.consume(x.getFloat(i));
                 }
             }
+        }
+
+        void traverse(com.github.peterrk.protocache.fr.ArrMap root) {
+            for (Map.Entry<String, com.github.peterrk.protocache.fr.ArrMap.Array> entry : root.getX().entrySet()) {
+                junk.consume(entry.getKey());
+                Float32List x = entry.getValue().getX();
+                for (int i = 0; i < x.size(); i++) {
+                    junk.consume(x.getFloat(i));
+                }
+            }
+        }
+
+        static com.github.peterrk.protocache.fr.Main createRoot() {
+            com.github.peterrk.protocache.fr.Main root = new com.github.peterrk.protocache.fr.Main();
+            root.setI32(-999);
+            root.setU32(1234);
+            root.setI64(-9876543210L);
+            root.setU64(98765432123456789L);
+            root.setFlag(true);
+            root.setMode(com.github.peterrk.protocache.fr.Mode.C);
+            root.setStr("Hello World!");
+            root.setData("abc123!?$*&()'-=@~".getBytes(StandardCharsets.UTF_8));
+            root.setF32(-2.1f);
+            root.setF64(1.0);
+            root.setObject(createSmall(88, false, "tmp"));
+            root.setI32v(new Int32List(new int[]{1, 2}));
+            root.setU64v(new UInt64List(new long[]{12345678987654321L}));
+            root.setStrv(listOf(
+                    "abc", "apple", "banana", "orange", "pear",
+                    "grape", "strawberry", "cherry", "mango", "watermelon"));
+            root.setDatav(new ArrayList<>());
+            root.setF32v(new Float32List(new float[]{1.1f, 2.2f}));
+            root.setF64v(new Float64List(new double[]{9.9, 8.8, 7.7, 6.6, 5.5}));
+            root.setFlags(new BoolList(new boolean[]{true, true, false, true, false, false, false}));
+            root.setObjectv(listOf(
+                    createSmall(1, false, ""),
+                    createSmall(0, true, ""),
+                    createSmall(0, false, "good luck!")));
+            root.setTU32(0);
+            root.setTI32(0);
+            root.setTS32(0);
+            root.setTU64(0);
+            root.setTI64(0);
+            root.setTS64(0);
+
+            Map<String, Integer> index = new LinkedHashMap<>();
+            index.put("abc-1", 1);
+            index.put("abc-2", 2);
+            index.put("x-1", 1);
+            index.put("x-2", 2);
+            index.put("x-3", 3);
+            index.put("x-4", 4);
+            root.setIndex(index);
+
+            Map<Integer, com.github.peterrk.protocache.fr.Small> objects = new LinkedHashMap<>();
+            objects.put(1, createSmall(1, false, "aaaaaaaaaaa"));
+            objects.put(2, createSmall(2, false, "b"));
+            objects.put(3, createSmall(3, false, "ccccccccccccccc"));
+            objects.put(4, createSmall(4, false, "ddddd"));
+            root.setObjects(objects);
+
+            com.github.peterrk.protocache.fr.Vec2D matrix = new com.github.peterrk.protocache.fr.Vec2D();
+            matrix.setX(listOf(
+                    createVec1D(1, 2, 3),
+                    createVec1D(4, 5, 6),
+                    createVec1D(7, 8, 9)));
+            root.setMatrix(matrix);
+            root.setVector(listOf(
+                    createArrMap(
+                            arrayEntry("lv1", 11, 12),
+                            arrayEntry("lv2", 21, 22)),
+                    createArrMap(arrayEntry("lv3", 31, 32))));
+            root.setArrays(createArrMap(
+                    arrayEntry("lv4", 41, 42),
+                    arrayEntry("lv5", 51, 52)));
+            return root;
+        }
+
+        private static com.github.peterrk.protocache.fr.Small createSmall(int i32, boolean flag, String str) {
+            com.github.peterrk.protocache.fr.Small small = new com.github.peterrk.protocache.fr.Small();
+            small.setI32(i32);
+            small.setFlag(flag);
+            small.setStr(str);
+            return small;
+        }
+
+        private static com.github.peterrk.protocache.fr.Vec2D.Vec1D createVec1D(float... values) {
+            com.github.peterrk.protocache.fr.Vec2D.Vec1D vec = new com.github.peterrk.protocache.fr.Vec2D.Vec1D();
+            vec.setX(new Float32List(values));
+            return vec;
+        }
+
+        @SafeVarargs
+        private static com.github.peterrk.protocache.fr.ArrMap createArrMap(
+                Map.Entry<String, com.github.peterrk.protocache.fr.ArrMap.Array>... entries) {
+            Map<String, com.github.peterrk.protocache.fr.ArrMap.Array> map = new LinkedHashMap<>();
+            for (Map.Entry<String, com.github.peterrk.protocache.fr.ArrMap.Array> entry : entries) {
+                map.put(entry.getKey(), entry.getValue());
+            }
+            com.github.peterrk.protocache.fr.ArrMap arrMap = new com.github.peterrk.protocache.fr.ArrMap();
+            arrMap.setX(map);
+            return arrMap;
+        }
+
+        private static Map.Entry<String, com.github.peterrk.protocache.fr.ArrMap.Array> arrayEntry(String key, float... values) {
+            com.github.peterrk.protocache.fr.ArrMap.Array array = new com.github.peterrk.protocache.fr.ArrMap.Array();
+            array.setX(new Float32List(values));
+            return new AbstractMap.SimpleImmutableEntry<>(key, array);
+        }
+
+        @SafeVarargs
+        private static <T> List<T> listOf(T... values) {
+            return new ArrayList<>(Arrays.asList(values));
         }
     }
 
