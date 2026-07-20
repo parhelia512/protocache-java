@@ -1,0 +1,10 @@
+/target/
+/.idea/
+*.iml
+
+# Locally generated compiler and benchmark artifacts
+/protoc-x
+/test.fb
+/test.fr
+/test.pb
+/test.pc

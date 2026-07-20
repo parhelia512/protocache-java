@@ -14,8 +14,6 @@ import org.openjdk.jmh.annotations.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -102,7 +100,7 @@ public class AccessBenchmark {
 
         @Setup(value = Level.Trial)
         public void setup() throws IOException {
-            raw = Files.readAllBytes(Paths.get("test.pc"));
+            raw = ProtoCache.serialize(TestData.protobufMain());
             compressed = Utils.compress(raw);
         }
     }
@@ -137,7 +135,10 @@ public class AccessBenchmark {
         public void setup() {
             com.github.peterrk.protocache.fr.Main root = createRoot();
 
-            fory = Fory.builder().withLanguage(Language.JAVA).build();
+            fory = Fory.builder()
+                    .withLanguage(Language.JAVA)
+                    .withCompatible(false)
+                    .build();
             fory.register(com.github.peterrk.protocache.fr.Mode.class);
             fory.register(com.github.peterrk.protocache.fr.Small.class);
             fory.register(com.github.peterrk.protocache.fr.Vec2D.Vec1D.class);
@@ -464,7 +465,7 @@ public class AccessBenchmark {
 
         @Setup(value = Level.Trial)
         public void setup() throws IOException {
-            raw = Files.readAllBytes(Paths.get("test.pc"));
+            raw = ProtoCache.serialize(TestData.protobufMain());
         }
 
         @TearDown(value = Level.Invocation)
@@ -579,7 +580,7 @@ public class AccessBenchmark {
 
         @Setup(value = Level.Trial)
         public void setup() throws IOException {
-            raw = Files.readAllBytes(Paths.get("test.pb"));
+            raw = TestData.protobufMain().toByteArray();
             junk = new Junk();
         }
 
@@ -693,7 +694,8 @@ public class AccessBenchmark {
 
         @Setup(value = Level.Trial)
         public void setup() throws IOException {
-            raw = Files.readAllBytes(Paths.get("test.fb"));
+            // Generate test.fb with FlatbuffersFixture.GENERATION_COMMANDS.
+            raw = FlatbuffersFixture.read();
             junk = new Junk();
         }
 

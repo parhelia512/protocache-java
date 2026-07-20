@@ -5,29 +5,17 @@
 package com.github.peterrk.protocache;
 
 import com.github.peterrk.protocache.pc.*;
-import com.google.protobuf.util.JsonFormat;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class ProtoCacheTest {
 
     @Test
-    public void binaryTest() {
-        byte[] raw = null;
-        try {
-            //raw = Files.readAllBytes(Paths.get("test.pc"));
-            raw = Files.readAllBytes(Paths.get("test.json"));
-            com.github.peterrk.protocache.pb.Main.Builder builder = com.github.peterrk.protocache.pb.Main.newBuilder();
-            JsonFormat.parser().ignoringUnknownFields().merge(new String(raw, StandardCharsets.UTF_8), builder);
-            raw = ProtoCache.serialize(builder.build());
-        } catch (IOException e) {
-            Assertions.fail();
-        }
+    public void binaryTest() throws IOException {
+        byte[] raw = ProtoCache.serialize(TestData.protobufMain());
 
         Main root = new Main(raw);
 
@@ -139,16 +127,8 @@ public class ProtoCacheTest {
     }
 
     @Test
-    public void aliasTest() {
-        byte[] raw = null;
-        try {
-            raw = Files.readAllBytes(Paths.get("test-alias.json"));
-            com.github.peterrk.protocache.pb.Main.Builder builder = com.github.peterrk.protocache.pb.Main.newBuilder();
-            JsonFormat.parser().ignoringUnknownFields().merge(new String(raw, StandardCharsets.UTF_8), builder);
-            raw = ProtoCache.serialize(builder.build());
-        } catch (IOException e) {
-            Assertions.fail();
-        }
+    public void aliasTest() throws IOException {
+        byte[] raw = ProtoCache.serialize(TestData.protobufMain("test-alias.json"));
         Assertions.assertEquals(68, raw.length);
         Assertions.assertEquals(0xd, Data.getInt(raw, 20));
         Assertions.assertEquals(1, Data.getInt(raw, 24));
@@ -156,26 +136,12 @@ public class ProtoCacheTest {
     }
 
     @Test
-    public void compressTest() {
-        byte[] raw = null;
-        try {
-            //raw = Files.readAllBytes(Paths.get("test.pc"));
-            raw = Files.readAllBytes(Paths.get("test.json"));
-            com.github.peterrk.protocache.pb.Main.Builder builder = com.github.peterrk.protocache.pb.Main.newBuilder();
-            JsonFormat.parser().ignoringUnknownFields().merge(new String(raw, StandardCharsets.UTF_8), builder);
-            raw = ProtoCache.serialize(builder.build());
-        } catch (IOException e) {
-            Assertions.fail();
-        }
+    public void compressTest() throws IOException {
+        byte[] raw = ProtoCache.serialize(TestData.protobufMain());
 
         byte[] compressed = Utils.compress(raw);
         Assertions.assertTrue(compressed.length != 0 && compressed.length < raw.length);
         byte[] back = Utils.decompress(compressed);
         Assertions.assertArrayEquals(raw, back);
-    }
-
-    @Test
-    public void reflectTest() {
-        //TODO
     }
 }
