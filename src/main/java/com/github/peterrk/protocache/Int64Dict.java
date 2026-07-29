@@ -53,7 +53,7 @@ public abstract class Int64Dict extends DictType {
         }
     }
 
-    public static class Float2Value extends Int64Dict {
+    public static class Float32Value extends Int64Dict {
         @Override
         public void init(byte[] data, int offset) {
             init(data, offset, 1);
@@ -63,7 +63,7 @@ public abstract class Int64Dict extends DictType {
         }
     }
 
-    public static class float64Value extends Int64Dict {
+    public static class Float64Value extends Int64Dict {
         @Override
         public void init(byte[] data, int offset) {
             init(data, offset, 2);

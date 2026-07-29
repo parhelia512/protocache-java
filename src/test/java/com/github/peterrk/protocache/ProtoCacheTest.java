@@ -5,6 +5,9 @@
 package com.github.peterrk.protocache;
 
 import com.github.peterrk.protocache.pc.*;
+import com.google.protobuf.DescriptorProtos;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.DynamicMessage;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -143,5 +146,101 @@ public class ProtoCacheTest {
         Assertions.assertTrue(compressed.length != 0 && compressed.length < raw.length);
         byte[] back = Utils.decompress(compressed);
         Assertions.assertArrayEquals(raw, back);
+    }
+
+    @Test
+    public void floatingPointMapTest() throws Descriptors.DescriptorValidationException {
+        DescriptorProtos.DescriptorProto.Builder schema = DescriptorProtos.DescriptorProto.newBuilder()
+                .setName("FloatMaps");
+        addMap(schema, "string_float", 1, "StringFloatEntry",
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_STRING,
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_FLOAT);
+        addMap(schema, "string_double", 2, "StringDoubleEntry",
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_STRING,
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_DOUBLE);
+        addMap(schema, "int32_float", 3, "Int32FloatEntry",
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_INT32,
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_FLOAT);
+        addMap(schema, "int32_double", 4, "Int32DoubleEntry",
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_INT32,
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_DOUBLE);
+        addMap(schema, "int64_float", 5, "Int64FloatEntry",
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_INT64,
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_FLOAT);
+        addMap(schema, "int64_double", 6, "Int64DoubleEntry",
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_INT64,
+                DescriptorProtos.FieldDescriptorProto.Type.TYPE_DOUBLE);
+
+        Descriptors.FileDescriptor file = Descriptors.FileDescriptor.buildFrom(
+                DescriptorProtos.FileDescriptorProto.newBuilder()
+                        .setName("floating-point-maps.proto")
+                        .setPackage("floating")
+                        .setSyntax("proto3")
+                        .addMessageType(schema)
+                        .build(),
+                new Descriptors.FileDescriptor[0]);
+        Descriptors.Descriptor descriptor = file.findMessageTypeByName("FloatMaps");
+        DynamicMessage.Builder input = DynamicMessage.newBuilder(descriptor);
+        putMap(input, "string_float", "alpha", 1.25f);
+        putMap(input, "string_double", "beta", 2.5);
+        putMap(input, "int32_float", -7, -3.75f);
+        putMap(input, "int32_double", 8, 4.5);
+        putMap(input, "int64_float", 9876543210L, 5.25f);
+        putMap(input, "int64_double", -123456789L, -6.5);
+
+        Message root = new Message(ProtoCache.serialize(input.build()), 0);
+
+        StringDict.Float32Value stringFloat = root.fetchObject(0, new StringDict.Float32Value());
+        Assertions.assertEquals(1.25f, stringFloat.getValue(stringFloat.find("alpha")));
+        StringDict.Float64Value stringDouble = root.fetchObject(1, new StringDict.Float64Value());
+        Assertions.assertEquals(2.5, stringDouble.getValue(stringDouble.find("beta")));
+
+        Int32Dict.Float32Value int32Float = root.fetchObject(2, new Int32Dict.Float32Value());
+        Assertions.assertEquals(-3.75f, int32Float.getValue(int32Float.find(-7)));
+        Int32Dict.Float64Value int32Double = root.fetchObject(3, new Int32Dict.Float64Value());
+        Assertions.assertEquals(4.5, int32Double.getValue(int32Double.find(8)));
+
+        Int64Dict.Float32Value int64Float = root.fetchObject(4, new Int64Dict.Float32Value());
+        Assertions.assertEquals(5.25f, int64Float.getValue(int64Float.find(9876543210L)));
+        Int64Dict.Float64Value int64Double = root.fetchObject(5, new Int64Dict.Float64Value());
+        Assertions.assertEquals(-6.5, int64Double.getValue(int64Double.find(-123456789L)));
+    }
+
+    private static void addMap(
+            DescriptorProtos.DescriptorProto.Builder owner,
+            String fieldName,
+            int fieldNumber,
+            String entryName,
+            DescriptorProtos.FieldDescriptorProto.Type keyType,
+            DescriptorProtos.FieldDescriptorProto.Type valueType) {
+        owner.addNestedType(DescriptorProtos.DescriptorProto.newBuilder()
+                .setName(entryName)
+                .setOptions(DescriptorProtos.MessageOptions.newBuilder().setMapEntry(true))
+                .addField(DescriptorProtos.FieldDescriptorProto.newBuilder()
+                        .setName("key")
+                        .setNumber(1)
+                        .setLabel(DescriptorProtos.FieldDescriptorProto.Label.LABEL_OPTIONAL)
+                        .setType(keyType))
+                .addField(DescriptorProtos.FieldDescriptorProto.newBuilder()
+                        .setName("value")
+                        .setNumber(2)
+                        .setLabel(DescriptorProtos.FieldDescriptorProto.Label.LABEL_OPTIONAL)
+                        .setType(valueType)));
+        owner.addField(DescriptorProtos.FieldDescriptorProto.newBuilder()
+                .setName(fieldName)
+                .setNumber(fieldNumber)
+                .setLabel(DescriptorProtos.FieldDescriptorProto.Label.LABEL_REPEATED)
+                .setType(DescriptorProtos.FieldDescriptorProto.Type.TYPE_MESSAGE)
+                .setTypeName(".floating.FloatMaps." + entryName));
+    }
+
+    private static void putMap(DynamicMessage.Builder owner, String fieldName, Object key, Object value) {
+        Descriptors.FieldDescriptor field = owner.getDescriptorForType().findFieldByName(fieldName);
+        Descriptors.Descriptor entryType = field.getMessageType();
+        DynamicMessage entry = DynamicMessage.newBuilder(entryType)
+                .setField(entryType.findFieldByName("key"), key)
+                .setField(entryType.findFieldByName("value"), value)
+                .build();
+        owner.addRepeatedField(field, entry);
     }
 }

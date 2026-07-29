@@ -15,15 +15,68 @@ in your local Maven repository, run `mvn install`, then use these coordinates:
 
 ```xml
 <dependency>
-    <groupId>com.github.peterrk</groupId>
+    <groupId>io.github.peterrk</groupId>
     <artifactId>protocache</artifactId>
-    <version>0.1</version>
+    <version>0.1.0</version>
 </dependency>
 ```
 
 The POM contains the project, license, developer, SCM, and issue-tracker
 metadata needed for publication. Deployment repository and signing credentials
 are release-environment concerns and are not stored in this repository.
+
+## Publishing to Maven Central
+
+Releases use the Maven Central Publisher Portal. Before the first release:
+
+1. Sign in to the Portal with the `PeterRK` GitHub account and verify that the
+   `io.github.peterrk` namespace is available.
+2. Create a Central user token and store it outside the repository in the local
+   Maven `settings.xml` under the server id `central`:
+
+   ```xml
+   <settings>
+       <servers>
+           <server>
+               <id>central</id>
+               <username><!-- Central token username --></username>
+               <password><!-- Central token password --></password>
+           </server>
+       </servers>
+   </settings>
+   ```
+
+3. Configure a local GPG signing key and publish its public key to a keyserver
+   supported by Maven Central.
+
+Batch-mode signing cannot open a pinentry dialog. Prime `gpg-agent` before the
+release, or provide `MAVEN_GPG_PASSPHRASE` through the release environment secret
+store; do not put the passphrase in this repository or a shell command.
+
+Build and sign the release artifacts without uploading them:
+
+```sh
+mvn --batch-mode --no-transfer-progress -Prelease verify
+```
+
+After the Central token is configured, exercise the full deploy lifecycle without
+uploading by adding `-Dcentral.skipPublishing=true`:
+
+```sh
+mvn --batch-mode --no-transfer-progress -Prelease \
+    -Dcentral.skipPublishing=true deploy
+```
+
+After checking the version, Git commit, Git tag, generated JARs, and signatures,
+upload a deployment for Central validation:
+
+```sh
+mvn --batch-mode --no-transfer-progress -Prelease deploy
+```
+
+The release profile does not publish automatically. Once validation succeeds,
+inspect and publish the deployment manually in the Central Portal. Maven
+Central releases are immutable, so a published version cannot be replaced.
 
 |  | Protobuf | ProtoCache | FlatBuffers | Fory | Fory-Java |
 |:-------|----:|----:|----:|----:|----:|
@@ -53,6 +106,18 @@ identical yet.
 Without zero-copy techniques, the Java version is slow. [Fory](https://fory.apache.org) claims better performance than Protobuf and FlatBuffers, and our benchmark shows that's true.
 
 See details in the [C++ version](https://github.com/peterrk/protocache).
+
+## Schema and data format
+
+ProtoCache uses a portable subset of Protobuf declarations and has its own flat
+binary representation. The canonical documentation is maintained with the C++
+implementation:
+
+- [Schema compatibility with Protobuf](https://github.com/PeterRK/protocache/blob/main/schema.md)
+- [ProtoCache data format](https://github.com/PeterRK/protocache/blob/main/data-format.md)
+
+In particular, ProtoCache maps support string and 32-bit or 64-bit integer
+keys. The Protobuf type `map<bool, ...>` is not supported.
 
 ## Code Gen
 
