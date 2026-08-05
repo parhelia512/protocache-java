@@ -4,10 +4,14 @@
 
 package com.github.peterrk.protocache;
 
+/** A zero-deserialization view of a ProtoCache boolean array. */
 public class BoolArray implements IUnit {
     private byte[] data;
     private int bodyOffset = -1;
     private int cnt = 0;
+
+    /** Creates an uninitialized, empty array view. */
+    public BoolArray() {}
 
     @Override
     public void init(byte[] data, int offset) {
@@ -34,10 +38,22 @@ public class BoolArray implements IUnit {
         throw new IllegalArgumentException("illegal bool array");
     }
 
+    /**
+     * Returns the number of elements in this array.
+     *
+     * @return element count
+     */
     public int size() {
         return cnt;
     }
 
+    /**
+     * Returns an element.
+     *
+     * @param idx zero-based element index
+     * @return the boolean value
+     * @throws IndexOutOfBoundsException if {@code idx} is out of range
+     */
     public boolean get(int idx) {
         return data[bodyOffset + idx] != 0;
     }

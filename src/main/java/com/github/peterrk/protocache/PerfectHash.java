@@ -8,6 +8,10 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Random;
 
+/**
+ * A compact perfect-hash index used by ProtoCache maps.
+ * Instances can either wrap encoded index data or be built from a key source.
+ */
 public class PerfectHash {
     final byte[] data;
     final int offset;
@@ -15,6 +19,13 @@ public class PerfectHash {
     final int size;
     private final int section;
 
+    /**
+     * Creates a view over an encoded perfect-hash index.
+     *
+     * @param data encoded index data
+     * @throws NullPointerException if {@code data} is {@code null}
+     * @throws IllegalArgumentException if the data is too short
+     */
     public PerfectHash(byte[] data) {
         this(data, 0);
     }
@@ -152,6 +163,15 @@ public class PerfectHash {
         throw new RuntimeException("fail to build perfect-hash");
     }
 
+    /**
+     * Builds a perfect-hash index for the keys supplied by {@code src}.
+     * Keys must be stable and unique across each traversal.
+     *
+     * @param src repeatable key source
+     * @return built perfect-hash index
+     * @throws NullPointerException if {@code src} is {@code null}
+     * @throws IllegalArgumentException if the reported key count is outside supported limits
+     */
     public static PerfectHash build(IKeySource src) {
         int size = src.total();
         if (size < 0 || size > 0xfffffff) {
@@ -172,10 +192,20 @@ public class PerfectHash {
         return new PerfectHash(data, size, calcSectionSize(size));
     }
 
+    /**
+     * Returns a view of the encoded index bytes.
+     *
+     * @return encoded-data view
+     */
     public Data.View getData() {
         return new Data.View(data, offset, offset + byteSize);
     }
 
+    /**
+     * Returns the number of indexed keys.
+     *
+     * @return key count
+     */
     public int getSize() {
         return size;
     }
@@ -208,9 +238,21 @@ public class PerfectHash {
         return off + countValidSlot(block);
     }
 
+    /** Supplies a repeatable sequence of keys when building an index. */
     public interface IKeySource {
+        /** Resets the source so the next read returns the first key. */
         void reset();
+        /**
+         * Returns the number of keys.
+         *
+         * @return key count
+         */
         int total();
+        /**
+         * Returns the next key.
+         *
+         * @return key bytes
+         */
         byte[] next();
     }
 

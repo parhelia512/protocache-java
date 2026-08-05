@@ -4,6 +4,10 @@
 
 package com.github.peterrk.protocache;
 
+/**
+ * Base class for schema-generated, zero-deserialization ProtoCache message views.
+ * A view retains the supplied byte array; callers must not mutate it while the view is in use.
+ */
 public class Message implements IUnit {
     private final static byte[] empty = new byte[4];
     private final static byte[] emptyBytes = new byte[0];
@@ -15,7 +19,15 @@ public class Message implements IUnit {
     private byte[] data;
     private int offset = -1;
 
+    /** Creates an uninitialized view whose fields have their default values. */
     public Message() {}
+
+    /**
+     * Creates a view over an encoded ProtoCache message.
+     *
+     * @param data backing ProtoCache data
+     * @param offset byte offset of the encoded message
+     */
     public Message(byte[] data, int offset) {
         init(data, offset);
     }
@@ -31,6 +43,12 @@ public class Message implements IUnit {
         this.offset = offset;
     }
 
+    /**
+     * Reports whether a zero-based field slot is present.
+     *
+     * @param id zero-based field slot
+     * @return {@code true} when the field is present
+     */
     public boolean hasField(int id) {
         int section = (int) data[offset] & 0xff;
         if (id < 12) {
@@ -87,6 +105,12 @@ public class Message implements IUnit {
         return offset + off * 4;
     }
 
+    /**
+     * Reads a boolean field.
+     *
+     * @param id zero-based field slot
+     * @return field value, or {@code false} when absent
+     */
     public boolean fetchBool(int id) {
         int fieldOffset = calcFieldOffset(id);
         if (fieldOffset < 0) {
@@ -95,6 +119,12 @@ public class Message implements IUnit {
         return data[fieldOffset] != 0;
     }
 
+    /**
+     * Reads a 32-bit integer or enum field.
+     *
+     * @param id zero-based field slot
+     * @return field value, or {@code 0} when absent
+     */
     public int fetchInt32(int id) {
         int fieldOffset = calcFieldOffset(id);
         if (fieldOffset < 0) {
@@ -103,6 +133,12 @@ public class Message implements IUnit {
         return Data.getInt(data, fieldOffset);
     }
 
+    /**
+     * Reads a 64-bit integer field.
+     *
+     * @param id zero-based field slot
+     * @return field value, or {@code 0} when absent
+     */
     public long fetchInt64(int id) {
         int fieldOffset = calcFieldOffset(id);
         if (fieldOffset < 0) {
@@ -111,6 +147,12 @@ public class Message implements IUnit {
         return Data.getLong(data, fieldOffset);
     }
 
+    /**
+     * Reads a 32-bit floating-point field.
+     *
+     * @param id zero-based field slot
+     * @return field value, or {@code 0.0f} when absent
+     */
     public float fetchFloat32(int id) {
         int fieldOffset = calcFieldOffset(id);
         if (fieldOffset < 0) {
@@ -119,6 +161,12 @@ public class Message implements IUnit {
         return Data.getFloat(data, fieldOffset);
     }
 
+    /**
+     * Reads a 64-bit floating-point field.
+     *
+     * @param id zero-based field slot
+     * @return field value, or {@code 0.0} when absent
+     */
     public double fetchFloat64(int id) {
         int fieldOffset = calcFieldOffset(id);
         if (fieldOffset < 0) {
@@ -127,6 +175,12 @@ public class Message implements IUnit {
         return Data.getDouble(data, fieldOffset);
     }
 
+    /**
+     * Reads a byte-string field.
+     *
+     * @param id zero-based field slot
+     * @return a copy of the field bytes, or an empty array when absent
+     */
     public byte[] fetchBytes(int id) {
         int fieldOffset = calcFieldOffset(id);
         if (fieldOffset < 0) {
@@ -135,6 +189,12 @@ public class Message implements IUnit {
         return Bytes.extractBytes(data, IUnit.jump(data, fieldOffset));
     }
 
+    /**
+     * Reads a UTF-8 string field.
+     *
+     * @param id zero-based field slot
+     * @return decoded string, or the empty string when absent
+     */
     public String fetchString(int id) {
         int fieldOffset = calcFieldOffset(id);
         if (fieldOffset < 0) {
@@ -143,6 +203,14 @@ public class Message implements IUnit {
         return Bytes.extractString(data, IUnit.jump(data, fieldOffset));
     }
 
+    /**
+     * Initializes and returns {@code unit} as a view of an object, array, or map field.
+     *
+     * @param id zero-based field slot
+     * @param unit view to initialize
+     * @param <T> view type
+     * @return {@code unit}; an empty view is initialized when the field is absent
+     */
     public <T extends IUnit> T fetchObject(int id, T unit) {
         int fieldOffset = calcFieldOffset(id);
         if (fieldOffset < 0) {
@@ -152,30 +220,72 @@ public class Message implements IUnit {
         return IUnit.initByField(data, calcFieldOffset(id), unit);
     }
 
+    /**
+     * Reads a boolean array field.
+     *
+     * @param id zero-based field slot
+     * @return array view, empty when the field is absent
+     */
     public BoolArray fetchBoolArray(int id) {
         return fetchObject(id, new BoolArray());
     }
 
+    /**
+     * Reads a 32-bit integer or enum array field.
+     *
+     * @param id zero-based field slot
+     * @return array view, empty when the field is absent
+     */
     public Int32Array fetchInt32Array(int id) {
         return fetchObject(id, new Int32Array());
     }
 
+    /**
+     * Reads a 64-bit integer array field.
+     *
+     * @param id zero-based field slot
+     * @return array view, empty when the field is absent
+     */
     public Int64Array fetchInt64Array(int id) {
         return fetchObject(id, new Int64Array());
     }
 
+    /**
+     * Reads a 32-bit floating-point array field.
+     *
+     * @param id zero-based field slot
+     * @return array view, empty when the field is absent
+     */
     public Float32Array fetchFloat32Array(int id) {
         return fetchObject(id, new Float32Array());
     }
 
+    /**
+     * Reads a 64-bit floating-point array field.
+     *
+     * @param id zero-based field slot
+     * @return array view, empty when the field is absent
+     */
     public Float64Array fetchFloat64Array(int id) {
         return fetchObject(id, new Float64Array());
     }
 
+    /**
+     * Reads a UTF-8 string array field.
+     *
+     * @param id zero-based field slot
+     * @return array view, empty when the field is absent
+     */
     public StringArray fetchStringArray(int id) {
         return fetchObject(id, new StringArray());
     }
 
+    /**
+     * Reads a byte-string array field.
+     *
+     * @param id zero-based field slot
+     * @return array view, empty when the field is absent
+     */
     public BytesArray fetchBytesArray(int id) {
         return fetchObject(id, new BytesArray());
     }

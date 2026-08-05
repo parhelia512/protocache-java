@@ -2,7 +2,11 @@ package com.github.peterrk.protocache;
 
 import java.io.ByteArrayOutputStream;
 
+/** Compression utilities for ProtoCache byte arrays. */
 public class Utils {
+    /** Creates a compression utility instance. */
+    public Utils() {}
+
     private static final class CompressContext {
         byte[] src;
         int k;
@@ -38,6 +42,13 @@ public class Utils {
         }
     }
 
+    /**
+     * Compresses a byte array using ProtoCache run-length encoding.
+     *
+     * @param src bytes to compress
+     * @return compressed representation; an empty input produces an empty output
+     * @throws NullPointerException if {@code src} is {@code null}
+     */
     public static byte[] compress(byte[] src) {
         if (src.length == 0) {
             return new byte[0];
@@ -118,6 +129,14 @@ public class Utils {
         return context.out;
     }
 
+    /**
+     * Decompresses data produced by {@link #compress(byte[])}.
+     *
+     * @param src compressed bytes
+     * @return decompressed bytes; an empty input produces an empty output
+     * @throws NullPointerException if {@code src} is {@code null}
+     * @throws IllegalArgumentException if {@code src} is malformed
+     */
     public static byte[] decompress(byte[] src) {
         if (src.length == 0) {
             return new byte[0];

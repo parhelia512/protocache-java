@@ -13,7 +13,19 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/** Serializes Protobuf messages into the ProtoCache binary format. */
 public class ProtoCache {
+    /** Creates a serializer utility instance. */
+    public ProtoCache() {}
+
+    /**
+     * Serializes a Protobuf message into ProtoCache data.
+     *
+     * @param message initialized Protobuf message
+     * @return encoded ProtoCache data
+     * @throws NullPointerException if {@code message} is {@code null}
+     * @throws IllegalArgumentException if the schema or encoded data exceeds ProtoCache limits
+     */
     public static byte[] serialize(Message message) {
         Descriptors.Descriptor descriptor = message.getDescriptorForType();
         List<Descriptors.FieldDescriptor> originFields = descriptor.getFields();

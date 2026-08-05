@@ -5,6 +5,12 @@
 package com.github.peterrk.protocache;
 
 interface IUnit {
+    /**
+     * Initializes this view over encoded ProtoCache data.
+     *
+     * @param data backing ProtoCache data
+     * @param offset byte offset of the encoded value, or a negative value for an empty view
+     */
     void init(byte[] data, int offset);
 
     static int jump(byte[] data, int offset) {

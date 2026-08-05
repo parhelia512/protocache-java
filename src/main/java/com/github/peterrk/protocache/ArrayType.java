@@ -5,11 +5,19 @@
 package com.github.peterrk.protocache;
 
 abstract class ArrayType implements IUnit {
+    /** Backing ProtoCache data. */
     protected byte[] data;
     private int bodyOffset = -1;
     private int size;
     private int width;
 
+    /**
+     * Initializes an array view.
+     *
+     * @param data backing ProtoCache data
+     * @param offset offset of the encoded array
+     * @param word expected element width in four-byte words, or {@code 0} for references
+     */
     protected void init(byte[] data, int offset, int word) {
         if (offset < 0) {
             this.data = null;
@@ -28,10 +36,21 @@ abstract class ArrayType implements IUnit {
         this.bodyOffset = offset + 4;
     }
 
+    /**
+     * Returns the number of elements in this array.
+     *
+     * @return element count
+     */
     public int size() {
         return size;
     }
 
+    /**
+     * Returns the encoded field offset for an element.
+     *
+     * @param idx zero-based element index
+     * @return byte offset in the backing data
+     */
     protected int fieldOffset(int idx) {
         return bodyOffset + idx * width;
     }

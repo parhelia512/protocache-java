@@ -7,7 +7,11 @@ package com.github.peterrk.protocache;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+/** Utility namespace for ProtoCache byte-string decoding. */
 public final class Bytes {
+    /** Creates a byte-string utility instance. */
+    public Bytes() {}
+
     static byte[] extractBytes(byte[] data, int offset) {
         int mark = 0;
         for (int sft = 0; sft < 32; sft += 7) {

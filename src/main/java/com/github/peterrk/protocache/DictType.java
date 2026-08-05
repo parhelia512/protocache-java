@@ -9,11 +9,23 @@ abstract class DictType implements IUnit {
         emptyIndex = new PerfectHash(empty);
     }
 
+    /** Perfect-hash index for the encoded keys. */
     protected PerfectHash index;
+    /** Byte offset of the first encoded key/value pair. */
     protected int bodyOffset;
+    /** Encoded key width in bytes. */
     protected int keyWidth;
+    /** Encoded value width in bytes. */
     protected int valueWidth;
 
+    /**
+     * Initializes a map view.
+     *
+     * @param data backing ProtoCache data
+     * @param offset offset of the encoded map
+     * @param keyWord expected key width in four-byte words, or {@code 0} for references
+     * @param valueWord expected value width in four-byte words, or {@code 0} for references
+     */
     protected void init(byte[] data, int offset, int keyWord, int valueWord) {
         if (offset < 0) {
             index = emptyIndex;
@@ -33,14 +45,31 @@ abstract class DictType implements IUnit {
         }
     }
 
+    /**
+     * Returns the number of entries in this map.
+     *
+     * @return entry count
+     */
     public int size() {
         return index.getSize();
     }
 
+    /**
+     * Returns the encoded key offset for an entry.
+     *
+     * @param idx zero-based map storage index
+     * @return byte offset in the backing data
+     */
     protected int keyFieldOffset(int idx) {
         return bodyOffset + idx * (keyWidth + valueWidth);
     }
 
+    /**
+     * Returns the encoded value offset for an entry.
+     *
+     * @param idx zero-based map storage index
+     * @return byte offset in the backing data
+     */
     protected int valueFieldOffset(int idx) {
         return keyFieldOffset(idx) + keyWidth;
     }
