@@ -29,11 +29,15 @@ public class Message implements IUnit {
      * @param offset byte offset of the encoded message
      */
     public Message(byte[] data, int offset) {
-        init(data, offset);
+        assign(data, offset);
     }
 
     @Override
     public void init(byte[] data, int offset) {
+        assign(data, offset);
+    }
+
+    private void assign(byte[] data, int offset) {
         if (offset < 0) {
             this.data = empty;
             this.offset = 0;

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashSet;
 
 public class HashTest {
 
@@ -59,5 +60,18 @@ public class HashTest {
             V128 code = Hash.hash128(Arrays.copyOfRange(buf, 0, i));
             Assertions.assertEquals(expected[i], code);
         }
+    }
+
+    @Test
+    public void valueEqualityUsesConsistentHashCode() {
+        V128 value = new V128(0x0123456789abcdefL, 0xfedcba9876543210L);
+        V128 equalValue = new V128(0x0123456789abcdefL, 0xfedcba9876543210L);
+
+        Assertions.assertEquals(value, equalValue);
+        Assertions.assertEquals(value.hashCode(), equalValue.hashCode());
+
+        HashSet<V128> values = new HashSet<>();
+        values.add(value);
+        Assertions.assertTrue(values.contains(equalValue));
     }
 }

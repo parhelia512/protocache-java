@@ -402,7 +402,11 @@ public class AccessBenchmark {
 
         @SafeVarargs
         private static <T> List<T> listOf(T... values) {
-            return new ArrayList<>(Arrays.asList(values));
+            ArrayList<T> result = new ArrayList<>(values.length);
+            for (T value : values) {
+                result.add(value);
+            }
+            return result;
         }
     }
 

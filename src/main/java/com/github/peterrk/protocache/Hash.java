@@ -13,6 +13,7 @@ class Hash {
         return hash128(data, 0);
     }
 
+    @SuppressWarnings("fallthrough")
     public static V128 hash128(byte[] data, long seed) {
         long magic = 0xdeadbeefdeadbeefL;
         State s = new State(seed, seed, magic, magic);
@@ -38,36 +39,47 @@ class Hash {
         switch (len & 0xf) {
             case 15:
                 s.d += ((long) data[off + 14] & 0xff) << 48;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 14:
                 s.d += ((long) data[off + 13] & 0xff) << 40;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 13:
                 s.d += ((long) data[off + 12] & 0xff) << 32;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 12:
                 s.c += Data.getLong(data, off);
                 s.d += Data.getInt(data, off + 8) & 0xffffffffL;
                 break;
             case 11:
                 s.d += ((long) data[off + 10] & 0xff) << 16;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 10:
                 s.d += ((long) data[off + 9] & 0xff) << 8;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 9:
                 s.d += data[off + 8] & 0xff;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 8:
                 s.c += Data.getLong(data, off);
                 break;
             case 7:
                 s.c += ((long) data[off + 6] & 0xff) << 48;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 6:
                 s.c += ((long) data[off + 5] & 0xff) << 40;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 5:
                 s.c += ((long) data[off + 4] & 0xff) << 32;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 4:
                 s.c += Data.getInt(data, off) & 0xffffffffL;
                 break;
             case 3:
                 s.c += ((long) data[off + 2] & 0xff) << 16;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 2:
                 s.c += ((long) data[off + 1] & 0xff) << 8;
+                // Fall through: the remaining tail bytes are accumulated below.
             case 1:
                 s.c += data[off] & 0xff;
                 break;
@@ -98,6 +110,12 @@ class Hash {
             }
             V128 other = (V128) obj;
             return low == other.low && high == other.high;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Long.hashCode(low);
+            return 31 * result + Long.hashCode(high);
         }
     }
 
