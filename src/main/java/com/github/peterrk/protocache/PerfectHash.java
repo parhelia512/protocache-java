@@ -123,7 +123,7 @@ public class PerfectHash {
         Data.putInt(data, 0, size);
 
         Random rand = new Random();
-        for (int chance = (width == 1) ? 40 : 16; chance >= 0; chance--) {
+        for (int chance = (width == 1) ? 40 : 16; chance > 0; chance--) {
             int seed = rand.nextInt();
             Data.putInt(data, 4, seed);
             graph.init(seed, src);
