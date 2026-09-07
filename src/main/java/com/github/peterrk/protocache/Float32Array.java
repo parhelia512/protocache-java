@@ -17,9 +17,8 @@ public class Float32Array extends ArrayType {
     /**
      * Returns an element.
      *
-     * @param idx zero-based element index
+     * @param idx element index; must satisfy {@code 0 <= idx && idx < size()}
      * @return the 32-bit floating-point value
-     * @throws IndexOutOfBoundsException if {@code idx} is out of range
      */
     public float get(int idx) {
         return Data.getFloat(data, fieldOffset(idx));

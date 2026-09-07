@@ -17,9 +17,8 @@ public class Int32Array extends ArrayType {
     /**
      * Returns an element.
      *
-     * @param idx zero-based element index
+     * @param idx element index; must satisfy {@code 0 <= idx && idx < size()}
      * @return the 32-bit integer value
-     * @throws IndexOutOfBoundsException if {@code idx} is out of range
      */
     public int get(int idx) {
         return Data.getInt(data, fieldOffset(idx));

@@ -17,9 +17,8 @@ public class BytesArray extends ArrayType {
     /**
      * Returns a copy of an element.
      *
-     * @param idx zero-based element index
+     * @param idx element index; must satisfy {@code 0 <= idx && idx < size()}
      * @return decoded bytes
-     * @throws IndexOutOfBoundsException if {@code idx} is out of range
      */
     public byte[] get(int idx) {
         return Bytes.extractBytes(data, IUnit.jump(data, fieldOffset(idx)));

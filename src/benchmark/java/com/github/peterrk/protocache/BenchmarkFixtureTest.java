@@ -7,6 +7,8 @@ package com.github.peterrk.protocache;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -26,7 +28,8 @@ public class BenchmarkFixtureTest {
 
         AccessBenchmark.FlatbuffersState flatbuffers = new AccessBenchmark.FlatbuffersState();
         flatbuffers.setup();
-        flatbuffers.traverse(com.github.peterrk.protocache.fb.Main.getRootAsMain(
-                ByteBuffer.wrap(flatbuffers.raw)));
+        com.github.peterrk.protocache.fb.Main root = com.github.peterrk.protocache.fb.Main.getRootAsMain(
+                ByteBuffer.wrap(flatbuffers.raw));
+        assertEquals(TestData.protobufMain().getI32(), root.i32());
     }
 }

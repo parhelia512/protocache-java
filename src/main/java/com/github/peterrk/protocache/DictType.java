@@ -39,8 +39,10 @@ abstract class DictType implements IUnit {
         int mark = Data.getInt(data, offset);
         keyWidth = ((mark >>> 30) & 3) * 4;
         valueWidth = ((mark >>> 28) & 3) * 4;
-        if ((keyWord != 0 && keyWidth != keyWord*4) || keyWidth == 0
-                || (valueWord != 0 && valueWidth != valueWord*4) || valueWidth == 0) {
+        // Empty maps have no elements whose widths must match the static view type.
+        if (keyWidth == 0 || valueWidth == 0
+                || (index.getSize() != 0 && ((keyWord != 0 && keyWidth != keyWord * 4)
+                || (valueWord != 0 && valueWidth != valueWord * 4)))) {
             throw new IllegalArgumentException("illegal map");
         }
     }
@@ -57,7 +59,7 @@ abstract class DictType implements IUnit {
     /**
      * Returns the encoded key offset for an entry.
      *
-     * @param idx zero-based map storage index
+     * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
      * @return byte offset in the backing data
      */
     protected int keyFieldOffset(int idx) {
@@ -67,7 +69,7 @@ abstract class DictType implements IUnit {
     /**
      * Returns the encoded value offset for an entry.
      *
-     * @param idx zero-based map storage index
+     * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
      * @return byte offset in the backing data
      */
     protected int valueFieldOffset(int idx) {

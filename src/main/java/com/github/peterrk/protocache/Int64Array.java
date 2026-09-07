@@ -17,9 +17,8 @@ public class Int64Array extends ArrayType {
     /**
      * Returns an element.
      *
-     * @param idx zero-based element index
+     * @param idx element index; must satisfy {@code 0 <= idx && idx < size()}
      * @return the 64-bit integer value
-     * @throws IndexOutOfBoundsException if {@code idx} is out of range
      */
     public long get(int idx) {
         return Data.getLong(data, fieldOffset(idx));

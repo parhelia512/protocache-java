@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 
 /** Serializes Protobuf messages into the ProtoCache binary format. */
 public class ProtoCache {
@@ -49,19 +50,31 @@ public class ProtoCache {
         }
         Descriptors.FieldDescriptor[] fields = new Descriptors.FieldDescriptor[maxId];
         for (Descriptors.FieldDescriptor field : originFields) {
+            // Keep declared field numbers and schema limits, but omit retired values.
+            if (field.getOptions().getDeprecated()) {
+                continue;
+            }
             int j = field.getNumber() - 1;
             if (fields[j] != null) {
                 throw new IllegalArgumentException(String.format("duplicate field id %d in %s", field.getNumber(), descriptor.getFullName()));
             }
             fields[j] = field;
         }
+        if (fields.length == 1 && fields[0] != null
+                && (fields[0].getName().equals("_") || fields[0].getName().equals("_x_"))) {
+            Descriptors.FieldDescriptor field = fields[0];
+            if (!field.isRepeated()) {
+                throw new IllegalArgumentException("container alias must be repeated: " + field.getFullName());
+            }
+            return field.isMapField() ? serializeMap(message, field) : serializeList(message, field);
+        }
+
         ArrayList<byte[]> parts = new ArrayList<>(fields.length);
         for (Descriptors.FieldDescriptor field : fields) {
             if (field == null) {
                 parts.add(null);
                 continue;
             }
-            String name = field.getFullName();
             if (field.isRepeated()) {
                 if (message.getRepeatedFieldCount(field) == 0) {
                     parts.add(null);
@@ -77,28 +90,18 @@ public class ProtoCache {
                     parts.add(null);
                     continue;
                 }
-                byte[] unit = serializeField(field, message.getField(field));
+                Object value = message.getField(field);
+                byte[] unit = serializeField(field, value);
+                // A one-word container alias is not necessarily empty.
                 if (unit != null && unit.length == 4
-                        && field.getType() == Descriptors.FieldDescriptor.Type.MESSAGE) {
+                        && field.getType() == Descriptors.FieldDescriptor.Type.MESSAGE
+                        && (Data.getInt(unit, 0) == 0 || isEmptyAlias((Message) value))) {
                     unit = null;
                 }
                 parts.add(unit);
             }
         }
 
-        if (fields.length == 1 && (fields[0].getName().equals("_") || fields[0].getName().equals("_x_"))) {
-            // trim message wrapper
-            byte[] out = parts.get(0);
-            if (out == null) {
-                out = new byte[4];
-                if (fields[0].isMapField()) {
-                    Data.putInt(out, 0, 5 << 28);
-                } else {
-                    Data.putInt(out, 0, 1);
-                }
-            }
-            return out;
-        }
         while (!parts.isEmpty() && parts.get(parts.size() - 1) == null) {
             parts.remove(parts.size() - 1);
         }
@@ -204,9 +207,39 @@ public class ProtoCache {
         return out;
     }
 
-    private static <T> byte[] serializeScalar(T value, int width, IDataFiller<T> filler) {
-        byte[] out = new byte[width * 4];
-        filler.fill(out, 0, value);
+    private static boolean isEmptyAlias(Message message) {
+        List<Descriptors.FieldDescriptor> fields = message.getDescriptorForType().getFields();
+        if (fields.size() != 1) {
+            return false;
+        }
+        Descriptors.FieldDescriptor field = fields.get(0);
+        // Preserve omission of empty aliases without discarding short boolean arrays.
+        return field.isRepeated()
+                && (field.getName().equals("_") || field.getName().equals("_x_"))
+                && message.getRepeatedFieldCount(field) == 0;
+    }
+
+    private static byte[] serializeScalar(int value) {
+        byte[] out = new byte[4];
+        Data.putInt(out, 0, value);
+        return out;
+    }
+
+    private static byte[] serializeScalar(long value) {
+        byte[] out = new byte[8];
+        Data.putLong(out, 0, value);
+        return out;
+    }
+
+    private static byte[] serializeScalar(float value) {
+        byte[] out = new byte[4];
+        Data.putFloat(out, 0, value);
+        return out;
+    }
+
+    private static byte[] serializeScalar(double value) {
+        byte[] out = new byte[8];
+        Data.putDouble(out, 0, value);
         return out;
     }
 
@@ -219,37 +252,25 @@ public class ProtoCache {
             case STRING:
                 return serialize((String) value);
             case DOUBLE:
-                return serializeScalar(value, 2, (data, offset, v) -> {
-                    Data.putDouble(data, offset, (Double) v);
-                });
+                return serializeScalar((Double) value);
             case FLOAT:
-                return serializeScalar(value, 1, (data, offset, v) -> {
-                    Data.putFloat(data, offset, (Float) v);
-                });
+                return serializeScalar((Float) value);
             case FIXED64:
             case UINT64:
             case SFIXED64:
             case SINT64:
             case INT64:
-                return serializeScalar(value, 2, (data, offset, v) -> {
-                    Data.putLong(data, offset, (Long) v);
-                });
+                return serializeScalar((Long) value);
             case FIXED32:
             case UINT32:
             case SFIXED32:
             case SINT32:
             case INT32:
-                return serializeScalar(value, 1, (data, offset, v) -> {
-                    Data.putInt(data, offset, (Integer) v);
-                });
+                return serializeScalar((Integer) value);
             case BOOL:
-                return serializeScalar(value, 1, (data, offset, v) -> {
-                    Data.putInt(data, offset, (Boolean) v ? 1 : 0);
-                });
+                return serializeScalar((Boolean) value ? 1 : 0);
             case ENUM:
-                return serializeScalar(value, 1, (data, offset, v) -> {
-                    Data.putInt(data, offset, ((Descriptors.EnumValueDescriptor) v).getNumber());
-                });
+                return serializeScalar(((Descriptors.EnumValueDescriptor) value).getNumber());
         }
         throw new IllegalArgumentException(String.format("unsupported field: %s", field.getFullName()));
     }
@@ -362,11 +383,11 @@ public class ProtoCache {
         return new BestArray(sizes[mode], mode + 1);
     }
 
-    private static byte[] serializeObjectList(Message message, Descriptors.FieldDescriptor field, ISerializer<Object> serializer) {
+    private static byte[] serializeObjectList(Message message, Descriptors.FieldDescriptor field, Function<Object, byte[]> serializer) {
         int cnt = message.getRepeatedFieldCount(field);
         byte[][] parts = new byte[cnt][];
         for (int i = 0; i < cnt; i++) {
-            parts[i] = serializer.serialize(message.getRepeatedField(field, i));
+            parts[i] = serializer.apply(message.getRepeatedField(field, i));
         }
         BestArray ret = detectBestArray(parts);
         ret.size += 1;
@@ -401,7 +422,7 @@ public class ProtoCache {
     }
 
     private static byte[] serializeScalarList(Message message, Descriptors.FieldDescriptor field,
-                                              int width, IDataFiller<Object> filler) {
+                                              int width, IDataFiller filler) {
         int size = message.getRepeatedFieldCount(field);
         if (size >= (1 << 28)) {
             throw new IllegalArgumentException("array size overflow");
@@ -467,7 +488,6 @@ public class ProtoCache {
         BestArray k = detectBestArray(outKeys);
         BestArray v = detectBestArray(outValues);
 
-        String name = field.getFullName();
         long size = indexSize;
         size += k.size + v.size;
         if (size >= (1 << 30)) {
@@ -519,14 +539,9 @@ public class ProtoCache {
         return out;
     }
 
-    private interface IDataFiller<T> {
-        void fill(byte[] data, int offset, T object);
+    private interface IDataFiller {
+        void fill(byte[] data, int offset, Object object);
     }
-
-    private interface ISerializer<T> {
-        byte[] serialize(T object);
-    }
-
 
     private static final class BestArray {
         public long size;

@@ -48,7 +48,7 @@ abstract class ArrayType implements IUnit {
     /**
      * Returns the encoded field offset for an element.
      *
-     * @param idx zero-based element index
+     * @param idx element index; must satisfy {@code 0 <= idx && idx < size()}
      * @return byte offset in the backing data
      */
     protected int fieldOffset(int idx) {

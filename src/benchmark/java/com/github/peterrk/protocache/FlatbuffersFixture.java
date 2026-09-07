@@ -12,7 +12,7 @@ import java.nio.file.Paths;
 final class FlatbuffersFixture {
     static final Path FILE = Paths.get("test.fb");
     static final String GENERATION_COMMANDS =
-            "flatc --binary -o . src/test/resources/test.fbs src/test/resources/test-fb.json\n" +
+            "flatc --binary -o . src/benchmark/resources/test.fbs src/benchmark/resources/test-fb.json\n" +
             "mv test-fb.bin test.fb";
 
     private FlatbuffersFixture() {}

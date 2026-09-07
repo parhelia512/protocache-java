@@ -17,9 +17,8 @@ public class StringArray extends ArrayType {
     /**
      * Returns an element decoded as UTF-8.
      *
-     * @param idx zero-based element index
+     * @param idx element index; must satisfy {@code 0 <= idx && idx < size()}
      * @return decoded string
-     * @throws IndexOutOfBoundsException if {@code idx} is out of range
      */
     public String get(int idx) {
         return Bytes.extractString(data, IUnit.jump(data, fieldOffset(idx)));

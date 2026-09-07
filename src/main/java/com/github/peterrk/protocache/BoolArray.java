@@ -50,9 +50,8 @@ public class BoolArray implements IUnit {
     /**
      * Returns an element.
      *
-     * @param idx zero-based element index
+     * @param idx element index; must satisfy {@code 0 <= idx && idx < size()}
      * @return the boolean value
-     * @throws IndexOutOfBoundsException if {@code idx} is out of range
      */
     public boolean get(int idx) {
         return data[bodyOffset + idx] != 0;

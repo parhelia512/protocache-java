@@ -221,7 +221,7 @@ public class Message implements IUnit {
             unit.init(null, -1);
             return unit;
         }
-        return IUnit.initByField(data, calcFieldOffset(id), unit);
+        return IUnit.initByField(data, fieldOffset, unit);
     }
 
     /**

@@ -132,10 +132,14 @@ public class Utils {
     /**
      * Decompresses data produced by {@link #compress(byte[])}.
      *
-     * @param src compressed bytes
+     * <p>The input must be a valid stream produced by {@code compress}, with a
+     * decompressed size that fits the application's memory budget. Malformed
+     * input is not fully validated and has no uniform exception guarantee.
+     *
+     * @param src valid compressed bytes
      * @return decompressed bytes; an empty input produces an empty output
      * @throws NullPointerException if {@code src} is {@code null}
-     * @throws IllegalArgumentException if {@code src} is malformed
+     * @throws IllegalArgumentException if an encoding or size inconsistency is detected
      */
     public static byte[] decompress(byte[] src) {
         if (src.length == 0) {

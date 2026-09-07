@@ -18,10 +18,9 @@ public class ObjectArray<T extends IUnit> extends ArrayType {
      * Initializes and returns {@code unit} as a view of an element.
      * Reusing a unit avoids allocating one object per access.
      *
-     * @param idx zero-based element index
+     * @param idx element index; must satisfy {@code 0 <= idx && idx < size()}
      * @param unit object view to initialize
      * @return {@code unit}
-     * @throws IndexOutOfBoundsException if {@code idx} is out of range
      */
     public T get(int idx, T unit) {
         return IUnit.initByField(data, fieldOffset(idx), unit);

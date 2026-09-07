@@ -1,6 +1,6 @@
 # ProtoCache Java
 
-Alternative flat binary format for [Protobuf schema](https://protobuf.dev/programming-guides/proto3/). It works like FlatBuffers, but it's usually smaller and supports maps. Flat means no deserialization overhead. [A benchmark](src/test/java/com/github/peterrk/protocache/AccessBenchmark.java) shows that Protobuf has considerable deserialization overhead and significant reflection overhead. FlatBuffers is fast but wastes space. ProtoCache strikes a balance between data size and read speed, so it's useful in data caching.
+Alternative flat binary format for [Protobuf schema](https://protobuf.dev/programming-guides/proto3/). It works like FlatBuffers, but it's usually smaller and supports maps. Flat means no deserialization overhead. [A benchmark](src/benchmark/java/com/github/peterrk/protocache/AccessBenchmark.java) shows that Protobuf has considerable deserialization overhead and significant reflection overhead. FlatBuffers is fast but wastes space. ProtoCache strikes a balance between data size and read speed, so it's useful in data caching.
 
 ## Requirements and build
 
@@ -17,9 +17,11 @@ in your local Maven repository, run `mvn install`, then use these coordinates:
 <dependency>
     <groupId>io.github.peterrk</groupId>
     <artifactId>protocache</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
 </dependency>
 ```
+
+See the [release notes](CHANGELOG.md) for fixes and upgrade considerations.
 
 The POM contains the project, license, developer, SCM, and issue-tracker
 metadata needed for publication. Deployment repository and signing credentials
@@ -27,7 +29,7 @@ are release-environment concerns and are not stored in this repository.
 
 ## Publishing to Maven Central
 
-Releases use the Maven Central Publisher Portal. Before the first release:
+Releases use the Maven Central Publisher Portal. Configure the release environment:
 
 1. Sign in to the Portal with the `PeterRK` GitHub account and verify that the
    `io.github.peterrk` namespace is available.
@@ -56,16 +58,18 @@ store; do not put the passphrase in this repository or a shell command.
 Build and sign the release artifacts without uploading them:
 
 ```sh
-mvn --batch-mode --no-transfer-progress -Prelease verify
+mvn --batch-mode --no-transfer-progress -Prelease clean verify
 ```
 
-After the Central token is configured, exercise the full deploy lifecycle without
-uploading by adding `-Dcentral.skipPublishing=true`:
+Exercise the full deploy lifecycle locally, including signing, without uploading:
 
 ```sh
-mvn --batch-mode --no-transfer-progress -Prelease \
-    -Dcentral.skipPublishing=true deploy
+bash scripts/publish.sh --dry-run
 ```
+
+This uses placeholder Central credentials because the publishing plugin requires
+a server entry even when uploading is disabled. No Central token is needed for
+the dry run; the local GPG signing key must be unlocked.
 
 After checking the version, Git commit, Git tag, generated JARs, and signatures,
 upload a deployment for Central validation:
@@ -77,6 +81,28 @@ mvn --batch-mode --no-transfer-progress -Prelease deploy
 The release profile does not publish automatically. Once validation succeeds,
 inspect and publish the deployment manually in the Central Portal. Maven
 Central releases are immutable, so a published version cannot be replaced.
+
+## Benchmarks
+
+Benchmarks and their FlatBuffers/Fory dependencies are enabled only by the
+`benchmark` profile. The default `mvn clean verify` runs functional tests.
+Build the benchmark source set and run JMH from the repository root:
+
+```sh
+mvn -Pbenchmark clean test-compile dependency:build-classpath \
+    -DincludeScope=test -Dmdep.outputFile=target/benchmark-classpath.txt
+java -cp "target/test-classes:target/classes:$(cat target/benchmark-classpath.txt)" \
+    org.openjdk.jmh.Main AccessBenchmark
+```
+
+Generate the FlatBuffers fixture below before running its benchmark. Use
+`mvn -Pbenchmark clean verify` to include benchmark fixture checks. Use `clean`
+when switching profiles so compiled benchmark classes do not remain in the
+shared test output directory.
+
+The figures below predate the switch to JMH Blackhole/return-value consumption.
+They have not been refreshed and should not be compared with results from the
+updated harness or treated as general performance guarantees.
 
 |  | Protobuf | ProtoCache | FlatBuffers | Fory | Fory-Java |
 |:-------|----:|----:|----:|----:|----:|
@@ -90,12 +116,12 @@ resource. The FlatBuffers binary is intentionally not stored in the repository;
 generate it from the repository root when needed:
 
 ```sh
-flatc --binary -o . src/test/resources/test.fbs src/test/resources/test-fb.json
+flatc --binary -o . src/benchmark/resources/test.fbs src/benchmark/resources/test-fb.json
 mv test-fb.bin test.fb
 ```
 
-The FlatBuffers fixture test is skipped with this instruction when `test.fb`
-is absent.
+The optional benchmark fixture test is skipped when `test.fb` is absent.
+It is not part of the default functional test suite.
 
 The Fory data size in this Java benchmark is produced by the Java runtime from
 `foryc`-generated Java classes. The C++ benchmark generated from the same FDL
@@ -118,6 +144,27 @@ implementation:
 
 In particular, ProtoCache maps support string and 32-bit or 64-bit integer
 keys. The Protobuf type `map<bool, ...>` is not supported.
+
+Deprecated fields are omitted when serializing, with their field numbers
+preserved as holes. Container aliases (a sole repeated field numbered 1 named
+`_`, or the Java-compatible spelling `_x_`) support empty values too. Use `_`
+for schemas shared with the C++ generator.
+
+Readers require valid ProtoCache data and access classes from a compatible
+schema; they do not fully validate input. Initialize views before access and
+keep indexes within `[0, size())`. Each thread must use its own views, including
+for read-only integer-map lookups. Backing byte arrays may be shared if safely
+published and left unchanged while views read them. Reinitializing a view
+replaces the data it exposes.
+
+Decompression requires a valid compressed stream and enough memory for its
+declared output size. Malformed inputs have no uniform exception guarantee.
+
+The release compatibility suite builds the C++ library and Java generator from
+an explicitly supplied checkout, then verifies reads and compression in both
+languages. For 1.0.0 it passed against C++ commit
+`5ed4a80995473c78838a4accba3bc9c99a2d1529`, including empty 64-bit aliases.
+See [cross-language verification](scripts/release-review/cross-language/README.md).
 
 ## Code Gen
 

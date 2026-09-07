@@ -2,7 +2,7 @@ package com.github.peterrk.protocache;
 
 /** A zero-deserialization view of a ProtoCache map with 32-bit integer keys. */
 public abstract class Int32Dict extends DictType {
-    /** Creates an uninitialized, empty map view. */
+    /** Creates an uninitialized map view; call {@code init} before access. */
     public Int32Dict() {}
     private byte[] tmp = null;
 
@@ -20,9 +20,8 @@ public abstract class Int32Dict extends DictType {
     /**
      * Returns the key stored at an index.
      *
-     * @param idx zero-based map storage index
+     * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
      * @return key at the index
-     * @throws IndexOutOfBoundsException if {@code idx} is out of range
      */
     public int getKey(int idx) {
         return Data.getInt(index.data, keyFieldOffset(idx));
@@ -48,7 +47,7 @@ public abstract class Int32Dict extends DictType {
 
     /** A map view with boolean values. */
     public static class BoolValue extends Int32Dict {
-        /** Creates an uninitialized, empty map view. */
+        /** Creates an uninitialized map view; call {@code init} before access. */
         public BoolValue() {}
         @Override
         public void init(byte[] data, int offset) {
@@ -57,9 +56,8 @@ public abstract class Int32Dict extends DictType {
         /**
          * Returns the value stored at an index.
          *
-         * @param idx zero-based map storage index
+         * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
          * @return value at the index
-         * @throws IndexOutOfBoundsException if {@code idx} is out of range
          */
         public boolean getValue(int idx) {
             return index.data[valueFieldOffset(idx)] != 0;
@@ -68,7 +66,7 @@ public abstract class Int32Dict extends DictType {
 
     /** A map view with 32-bit integer values. */
     public static class Int32Value extends Int32Dict {
-        /** Creates an uninitialized, empty map view. */
+        /** Creates an uninitialized map view; call {@code init} before access. */
         public Int32Value() {}
         @Override
         public void init(byte[] data, int offset) {
@@ -77,9 +75,8 @@ public abstract class Int32Dict extends DictType {
         /**
          * Returns the value stored at an index.
          *
-         * @param idx zero-based map storage index
+         * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
          * @return value at the index
-         * @throws IndexOutOfBoundsException if {@code idx} is out of range
          */
         public int getValue(int idx) {
             return Data.getInt(index.data, valueFieldOffset(idx));
@@ -88,7 +85,7 @@ public abstract class Int32Dict extends DictType {
 
     /** A map view with 64-bit integer values. */
     public static class Int64Value extends Int32Dict {
-        /** Creates an uninitialized, empty map view. */
+        /** Creates an uninitialized map view; call {@code init} before access. */
         public Int64Value() {}
         @Override
         public void init(byte[] data, int offset) {
@@ -97,9 +94,8 @@ public abstract class Int32Dict extends DictType {
         /**
          * Returns the value stored at an index.
          *
-         * @param idx zero-based map storage index
+         * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
          * @return value at the index
-         * @throws IndexOutOfBoundsException if {@code idx} is out of range
          */
         public long getValue(int idx) {
             return Data.getLong(index.data, valueFieldOffset(idx));
@@ -108,7 +104,7 @@ public abstract class Int32Dict extends DictType {
 
     /** A map view with 32-bit floating-point values. */
     public static class Float32Value extends Int32Dict {
-        /** Creates an uninitialized, empty map view. */
+        /** Creates an uninitialized map view; call {@code init} before access. */
         public Float32Value() {}
         @Override
         public void init(byte[] data, int offset) {
@@ -117,9 +113,8 @@ public abstract class Int32Dict extends DictType {
         /**
          * Returns the value stored at an index.
          *
-         * @param idx zero-based map storage index
+         * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
          * @return value at the index
-         * @throws IndexOutOfBoundsException if {@code idx} is out of range
          */
         public float getValue(int idx) {
             return Data.getFloat(index.data, valueFieldOffset(idx));
@@ -128,7 +123,7 @@ public abstract class Int32Dict extends DictType {
 
     /** A map view with 64-bit floating-point values. */
     public static class Float64Value extends Int32Dict {
-        /** Creates an uninitialized, empty map view. */
+        /** Creates an uninitialized map view; call {@code init} before access. */
         public Float64Value() {}
         @Override
         public void init(byte[] data, int offset) {
@@ -137,9 +132,8 @@ public abstract class Int32Dict extends DictType {
         /**
          * Returns the value stored at an index.
          *
-         * @param idx zero-based map storage index
+         * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
          * @return value at the index
-         * @throws IndexOutOfBoundsException if {@code idx} is out of range
          */
         public double getValue(int idx) {
             return Data.getDouble(index.data, valueFieldOffset(idx));
@@ -148,7 +142,7 @@ public abstract class Int32Dict extends DictType {
 
     /** A map view with UTF-8 string values. */
     public static class StringValue extends Int32Dict {
-        /** Creates an uninitialized, empty map view. */
+        /** Creates an uninitialized map view; call {@code init} before access. */
         public StringValue() {}
         @Override
         public void init(byte[] data, int offset) {
@@ -158,9 +152,8 @@ public abstract class Int32Dict extends DictType {
         /**
          * Returns the value stored at an index.
          *
-         * @param idx zero-based map storage index
+         * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
          * @return value at the index
-         * @throws IndexOutOfBoundsException if {@code idx} is out of range
          */
         public String getValue(int idx) {
             return Bytes.extractString(index.data, IUnit.jump(index.data, valueFieldOffset(idx)));
@@ -169,7 +162,7 @@ public abstract class Int32Dict extends DictType {
 
     /** A map view with byte-string values. */
     public static class BytesValue extends Int32Dict {
-        /** Creates an uninitialized, empty map view. */
+        /** Creates an uninitialized map view; call {@code init} before access. */
         public BytesValue() {}
         @Override
         public void init(byte[] data, int offset) {
@@ -179,9 +172,8 @@ public abstract class Int32Dict extends DictType {
         /**
          * Returns the value stored at an index.
          *
-         * @param idx zero-based map storage index
+         * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
          * @return value at the index
-         * @throws IndexOutOfBoundsException if {@code idx} is out of range
          */
         public byte[] getValue(int idx) {
             return Bytes.extractBytes(index.data, IUnit.jump(index.data, valueFieldOffset(idx)));
@@ -194,7 +186,7 @@ public abstract class Int32Dict extends DictType {
      * @param <V> generated object view type
      */
     public static class ObjectValue<V extends IUnit> extends Int32Dict {
-        /** Creates an uninitialized, empty map view. */
+        /** Creates an uninitialized map view; call {@code init} before access. */
         public ObjectValue() {}
         @Override
         public void init(byte[] data, int offset) {
@@ -204,10 +196,9 @@ public abstract class Int32Dict extends DictType {
         /**
          * Initializes and returns {@code unit} as a view of the value at an index.
          *
-         * @param idx zero-based map storage index
+         * @param idx map storage index; must satisfy {@code 0 <= idx && idx < size()}
          * @param unit object view to initialize
          * @return {@code unit}
-         * @throws IndexOutOfBoundsException if {@code idx} is out of range
          */
         public V getValue(int idx, V unit) {
             return IUnit.initByField(index.data, valueFieldOffset(idx), unit);
